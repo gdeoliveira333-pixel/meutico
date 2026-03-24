@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '../api'
 import { Plus, Trash2, FolderOpen, Shield, FolderSearch } from 'lucide-react'
 import { PageHeader, Card, BtnPrimary, EmptyState, Alert } from '../components/UI'
-import FolderPicker from '../components/FolderPicker'
 
 export default function Roots() {
   const [roots, setRoots] = useState([])
@@ -12,10 +11,20 @@ export default function Roots() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [picker, setPicker] = useState(false)
+  const folderInputRef = useRef(null)
 
   const load = () => api.getRoots().then(setRoots)
   useEffect(() => { load() }, [])
+
+  const handleFolderSelect = (e) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    // webkitRelativePath = "NomePasta/arquivo.ext" — pega o nome da pasta raiz
+    const firstPath = files[0].webkitRelativePath
+    const rootFolder = firstPath.split('/')[0]
+    setPath(rootFolder)
+    setLabel(rootFolder)
+  }
 
   const add = async () => {
     if (!path.trim()) return
@@ -41,14 +50,12 @@ export default function Roots() {
         subtitle="O agente só acessa pastas que você adicionar aqui — nunca além disso."
       />
 
-      {/* Info */}
       <div className="flex items-center gap-2 mb-6 text-xs rounded-xl px-4 py-3"
         style={{ background: 'rgba(0,245,212,0.05)', border: '1px solid rgba(0,245,212,0.12)', color: 'rgba(0,245,212,0.7)' }}>
         <Shield size={12} style={{ color: '#00f5d4' }} />
         Pastas de sistema (Windows, Program Files) são bloqueadas automaticamente.
       </div>
 
-      {/* Form */}
       <Card className="mb-6">
         <p className="text-xs font-semibold mb-3 uppercase tracking-widest" style={{ color: 'rgba(0,245,212,0.7)' }}>
           Adicionar pasta
@@ -59,16 +66,23 @@ export default function Roots() {
               value={path}
               onChange={e => setPath(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && add()}
-              placeholder="C:\Users\voce\Documents\minha-pasta"
+              placeholder="Nome da pasta ou selecione abaixo"
               className="flex-1 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-600 transition-all"
               style={{ background: 'rgba(15,22,35,0.8)', border: '1px solid rgba(255,255,255,0.08)', minWidth: 0 }}
             />
-            <button onClick={async () => {
-                try {
-                  const res = await api.pickFolder()
-                  if (res?.path) setPath(res.path)
-                } catch(e) { /* usuário cancelou */ }
-              }} title="Selecionar pasta"
+            {/* Input oculto que abre o seletor de pasta nativo */}
+            <input
+              ref={folderInputRef}
+              type="file"
+              webkitdirectory=""
+              directory=""
+              multiple
+              style={{ display: 'none' }}
+              onChange={handleFolderSelect}
+            />
+            <button
+              onClick={() => folderInputRef.current?.click()}
+              title="Selecionar pasta do computador"
               className="shrink-0 px-3 rounded-xl transition-all"
               style={{ background: 'rgba(0,245,212,0.06)', border: '1px solid rgba(0,245,212,0.2)', color: '#00f5d4' }}>
               <FolderSearch size={14} />
@@ -89,7 +103,6 @@ export default function Roots() {
         {success && <div className="mt-3"><Alert type="success">{success}</Alert></div>}
       </Card>
 
-      {/* List */}
       {roots.length === 0
         ? <EmptyState icon={FolderOpen} message="Nenhuma origem cadastrada ainda. Adicione uma pasta acima para começar." />
         : (
@@ -122,10 +135,6 @@ export default function Roots() {
           </div>
         )
       }
-
-      <AnimatePresence>
-        {picker && <FolderPicker onSelect={p => setPath(p)} onClose={() => setPicker(false)} />}
-      </AnimatePresence>
     </>
   )
 }
