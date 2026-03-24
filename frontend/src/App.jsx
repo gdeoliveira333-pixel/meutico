@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { HardDrive, FolderSearch, Copy, Zap, History, Menu, X, Activity, Search, Clock, Cloud, LogOut } from 'lucide-react'
+import { HardDrive, Copy, Zap, History, Menu, X, Activity, Search, Clock, Cloud, LogOut, LayoutDashboard } from 'lucide-react'
 import Login from './pages/Login'
 import Landing from './pages/Landing'
-import Roots from './pages/Roots'
-import Scanner from './pages/Scanner'
-import Duplicates from './pages/Duplicates'
+import Dashboard from './pages/Dashboard'
 import Agent from './pages/Agent'
 import AuditLog from './pages/AuditLog'
 import SearchPage from './pages/Search'
@@ -13,9 +11,7 @@ import Scheduler from './pages/Scheduler'
 import CloudPage from './pages/Cloud'
 
 const TABS = [
-  { id: 'roots',      label: 'Origens',    icon: HardDrive },
-  { id: 'scanner',    label: 'Scanner',    icon: FolderSearch },
-  { id: 'duplicates', label: 'Duplicatas', icon: Copy },
+  { id: 'dashboard',  label: 'Início',     icon: LayoutDashboard },
   { id: 'search',     label: 'Busca IA',   icon: Search },
   { id: 'agent',      label: 'Agente',     icon: Zap },
   { id: 'cloud',      label: 'Drive',      icon: Cloud },
@@ -26,8 +22,11 @@ const TABS = [
 export default function App() {
   const [loggedIn, setLoggedIn]   = useState(!!localStorage.getItem('mt_token'))
   const [showApp, setShowApp]     = useState(false)
-  const [tab, setTab]             = useState('roots')
+  const [tab, setTab]             = useState('dashboard')
   const [menuOpen, setMenuOpen]   = useState(false)
+
+  // Permite que componentes filhos naveguem para uma aba
+  window._setTab = setTab
 
   const logout = () => {
     localStorage.removeItem('mt_token')
@@ -126,9 +125,7 @@ export default function App() {
           <motion.div key={tab}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}>
-            {tab === 'roots'      && <Roots />}
-            {tab === 'scanner'    && <Scanner />}
-            {tab === 'duplicates' && <Duplicates />}
+            {tab === 'dashboard'  && <Dashboard />}
             {tab === 'search'     && <SearchPage />}
             {tab === 'agent'      && <Agent />}
             {tab === 'cloud'      && <CloudPage />}
