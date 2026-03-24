@@ -8,6 +8,8 @@ backend/*.spec
 backend/.env
 backend/manifest.db
 backend/google_token.json
+backend/google_credentials.json
+backend/.oauth_state.json
 backend/meu-tico-server.exe
 
 # Node
