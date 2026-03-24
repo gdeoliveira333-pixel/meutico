@@ -1,7 +1,9 @@
-// Em produção (Electron) não tem proxy Vite, acessa direto
+// Em produção aponta pro Railway, local usa proxy Vite
 const BASE = window.location.protocol === 'file:'
   ? 'http://localhost:8000'
-  : '/api'
+  : window.location.hostname === 'localhost'
+    ? '/api'
+    : 'https://meutico-production.up.railway.app'
 
 function getToken() {
   return localStorage.getItem('mt_token') || ''
