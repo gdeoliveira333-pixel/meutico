@@ -232,6 +232,10 @@ export default function Dashboard() {
     }))
 
     setFiles(indexed)
+    // Salva no sessionStorage para Busca IA usar
+    sessionStorage.setItem('scanned_files', JSON.stringify(
+      indexed.map(({ id, name, path, size_bytes, extension, lastModified }) => ({ id, name, path, size_bytes, extension, lastModified }))
+    ))
     setGroups(null)
     setSummary(null)
     setAgentReport('')
@@ -283,10 +287,8 @@ export default function Dashboard() {
       const totalSize = files.reduce((s, f) => s + f.size_bytes, 0)
       const dupCount = summary?.total ?? 0
       const wastedMb = summary?.mb ?? 0
-      const res = await api.getAgent({
-        context: `Pasta: ${files[0]?.path.split('/')[0]}, ${files.length} arquivos, ${fmt(totalSize)} total, ${dupCount} duplicatas, ${wastedMb}MB desperdiçados`
-      })
-      setAgentReport(res.response || res.message || JSON.stringify(res))
+      const res = await api.getAgent()
+      setAgentReport(res.ai_analysis || res.response || res.message || 'Análise concluída.')
     } catch(e) {
       setAgentReport('Erro ao conectar com o agente.')
     } finally {
