@@ -48,6 +48,8 @@ PUBLIC_PATHS = {"/health", "/auth/login"}
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
     if request.url.path in PUBLIC_PATHS or request.url.path.startswith("/cloud/callback"):
         return await call_next(request)
     token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
