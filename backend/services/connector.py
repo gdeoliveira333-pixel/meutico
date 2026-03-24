@@ -29,9 +29,6 @@ def _is_protected(path: str) -> bool:
 def add_root(db: Session, path: str, label: str | None = None) -> AllowedRoot:
     resolved = str(Path(path).resolve())
 
-    if not os.path.isdir(resolved):
-        raise ValueError(f"Caminho não existe ou não é um diretório: {resolved}")
-
     if _is_protected(resolved):
         raise PermissionError(f"Caminho protegido pelo sistema — não permitido: {resolved}")
 
