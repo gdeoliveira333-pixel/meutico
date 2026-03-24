@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+backend/dist/
+backend/build/
+backend/*.spec
+backend/.env
+backend/manifest.db
+backend/google_token.json
+backend/meu-tico-server.exe
+
+# Node
+node_modules/
+frontend/node_modules/
+electron/node_modules/
+frontend/dist/
+electron/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp.*

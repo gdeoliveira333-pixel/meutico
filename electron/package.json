@@ -1,0 +1,47 @@
+{
+  "name": "meu-tico",
+  "version": "1.0.0",
+  "description": "Meu Tico — AI File Manager para video makers",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "electron-is-dev": "^2.0.0"
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.meutico.app",
+    "productName": "Meu Tico",
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico",
+      "signingHashAlgorithms": null,
+      "sign": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    },
+    "files": [
+      "main.js",
+      "assets/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend/dist",
+        "to": "frontend"
+      },
+      {
+        "from": "backend-dist/meu-tico-server.exe",
+        "to": "backend/meu-tico-server.exe"
+      }
+    ]
+  }
+}
