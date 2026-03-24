@@ -56,7 +56,7 @@ export const api = {
   getAuditLog: () => request('GET', '/audit-log'),
   pickFolder: () => request('GET', '/pick-folder'),
   browse: (path = '') => request('GET', `/browse${path ? '?path=' + encodeURIComponent(path) : ''}`),
-  search: (query) => request('POST', '/search', { query }),
+  search: (query, files = null) => request('POST', '/search', { query, files }),
   getSchedules: () => request('GET', '/schedules'),
   addSchedule: (job_id, interval, label, source_path, folder_id) =>
     request('POST', '/schedules', { job_id, interval, label, source_path, folder_id }),

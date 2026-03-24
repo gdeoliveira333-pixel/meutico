@@ -18,6 +18,17 @@ CREDENTIALS_FILE = Path(__file__).parent.parent / "google_credentials.json"
 TOKEN_FILE       = Path(__file__).parent.parent / "google_token.json"
 SCOPES           = ["https://www.googleapis.com/auth/drive.file"]
 
+def _get_credentials_data():
+    """Lê credenciais do arquivo ou da variável de ambiente GOOGLE_CREDENTIALS_JSON."""
+    env_creds = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if env_creds:
+        return json.loads(env_creds)
+    if CREDENTIALS_FILE.exists():
+        return json.loads(CREDENTIALS_FILE.read_text())
+    raise FileNotFoundError(
+        "Credenciais Google não encontradas. Configure a variável GOOGLE_CREDENTIALS_JSON no Railway."
+    )
+
 _upload_jobs: dict[str, dict] = {}  # job_id → status
 _lock = threading.Lock()
 
@@ -33,7 +44,7 @@ def _get_creds():
 
     # Suporta tanto o formato direto da API quanto o formato do google-auth
     if "token" not in token_data and "access_token" in token_data:
-        creds_data = json.loads(CREDENTIALS_FILE.read_text())
+        creds_data = _get_credentials_data()
         cfg = creds_data.get("web") or creds_data.get("installed")
         creds = Credentials(
             token=token_data["access_token"],
@@ -64,13 +75,7 @@ def get_auth_url() -> str:
     """Gera a URL de autorização OAuth2."""
     import urllib.parse, secrets
 
-    if not CREDENTIALS_FILE.exists():
-        raise FileNotFoundError(
-            "Arquivo google_credentials.json não encontrado. "
-            "Baixe as credenciais em console.cloud.google.com e salve em backend/google_credentials.json"
-        )
-
-    creds_data = json.loads(CREDENTIALS_FILE.read_text())
+    creds_data = _get_credentials_data()
     cfg = creds_data.get("web") or creds_data.get("installed")
     client_id = cfg["client_id"]
     state = secrets.token_urlsafe(16)
@@ -80,7 +85,7 @@ def get_auth_url() -> str:
 
     params = {
         "client_id":     client_id,
-        "redirect_uri":  "http://localhost:8000/cloud/callback",
+        "redirect_uri":  os.environ.get("REDIRECT_URI", "http://localhost:8000/cloud/callback"),
         "response_type": "code",
         "scope":         " ".join(SCOPES),
         "access_type":   "offline",
@@ -92,14 +97,14 @@ def get_auth_url() -> str:
 
 def handle_callback(code: str) -> bool:
     """Troca o código de autorização pelo token e salva."""
-    creds_data = json.loads(CREDENTIALS_FILE.read_text())
+    creds_data = _get_credentials_data()
     cfg = creds_data.get("web") or creds_data.get("installed")
 
     data = urllib.parse.urlencode({
         "code":          code,
         "client_id":     cfg["client_id"],
         "client_secret": cfg["client_secret"],
-        "redirect_uri":  "http://localhost:8000/cloud/callback",
+        "redirect_uri":  os.environ.get("REDIRECT_URI", "http://localhost:8000/cloud/callback"),
         "grant_type":    "authorization_code",
     }).encode()
 

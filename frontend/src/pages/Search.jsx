@@ -1,20 +1,20 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '../api'
-import { SearchIcon, FileText, Sparkles, ArrowRight } from 'lucide-react'
+import { SearchIcon, FileText, Sparkles, ArrowRight, FolderOpen } from 'lucide-react'
 import { PageHeader, Card, EmptyState, Alert } from '../components/UI'
 
 const SUGGESTIONS = [
-  'fotos de viagem', 'documentos de trabalho antigos', 'vídeos grandes', 'planilhas de orçamento', 'backups zip'
+  'fotos de viagem', 'vídeos grandes', 'documentos antigos', 'backups zip', 'planilhas'
 ]
 
 const EXT_ICON = {
-  '.jpg': '🖼️', '.jpeg': '🖼️', '.png': '🖼️', '.gif': '🖼️', '.webp': '🖼️', '.heic': '🖼️',
+  '.jpg': '🖼️', '.jpeg': '🖼️', '.png': '🖼️', '.gif': '🖼️', '.webp': '🖼️',
   '.mp4': '🎬', '.mov': '🎬', '.avi': '🎬', '.mkv': '🎬',
-  '.mp3': '🎵', '.wav': '🎵', '.flac': '🎵',
+  '.mp3': '🎵', '.wav': '🎵',
   '.pdf': '📄', '.doc': '📝', '.docx': '📝',
   '.xls': '📊', '.xlsx': '📊',
-  '.zip': '📦', '.rar': '📦', '.7z': '📦',
+  '.zip': '📦', '.rar': '📦',
 }
 
 function fmt(b) {
@@ -23,17 +23,36 @@ function fmt(b) {
   return `${(b/1024).toFixed(1)} KB`
 }
 
+function getLocalFiles() {
+  try {
+    return JSON.parse(sessionStorage.getItem('scanned_files') || '[]')
+  } catch { return [] }
+}
+
 export default function Search() {
   const [query, setQuery]     = useState('')
   const [result, setResult]   = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
 
+  const localFiles = getLocalFiles()
+
   const search = async (q = query) => {
     if (!q.trim()) return
     setLoading(true); setResult(null); setError('')
-    try { setResult(await api.search(q.trim())) }
-    catch(e) { setError(e.message) }
+    try {
+      if (localFiles.length > 0) {
+        // Busca local: envia lista de arquivos + query pro backend IA filtrar
+        const res = await api.search(q.trim(), localFiles.map(f => ({
+          name: f.name, path: f.path, size_bytes: f.size_bytes, extension: f.extension
+        })))
+        setResult(res)
+      } else {
+        // Sem arquivos locais: busca no banco do servidor
+        const res = await api.search(q.trim())
+        setResult(res)
+      }
+    } catch(e) { setError(e.message) }
     finally { setLoading(false) }
   }
 
@@ -44,7 +63,14 @@ export default function Search() {
         subtitle="Descreva o que você procura em linguagem natural — a IA encontra nos seus arquivos."
       />
 
-      {/* Search box */}
+      {localFiles.length === 0 && (
+        <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-xl text-sm"
+          style={{ background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.15)', color: 'rgba(251,191,36,0.8)' }}>
+          <FolderOpen size={14} />
+          Vá para <strong className="text-white mx-1">Início</strong> e selecione uma pasta primeiro para buscar nos seus arquivos locais.
+        </div>
+      )}
+
       <div className="relative mb-6">
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -55,7 +81,7 @@ export default function Search() {
               onKeyDown={e => e.key === 'Enter' && search()}
               placeholder='Ex: "vídeo do cachorro branco" ou "nota fiscal de dezembro"'
               className="w-full rounded-2xl pl-10 pr-4 py-4 text-sm text-white placeholder-slate-600 transition-all"
-              style={{ background: 'rgba(10,15,25,0.9)', border: '1px solid rgba(0,245,212,0.2)', boxShadow: '0 0 20px rgba(0,245,212,0.05)' }}
+              style={{ background: 'rgba(10,15,25,0.9)', border: '1px solid rgba(0,245,212,0.2)' }}
             />
           </div>
           <button onClick={() => search()} disabled={loading || !query.trim()}
@@ -65,7 +91,6 @@ export default function Search() {
           </button>
         </div>
 
-        {/* Suggestions */}
         {!result && !loading && (
           <div className="flex flex-wrap gap-2 mt-3">
             {SUGGESTIONS.map(s => (
@@ -84,7 +109,6 @@ export default function Search() {
       <AnimatePresence>
         {result && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            {/* AI explanation */}
             <Card glow>
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles size={12} style={{ color: '#00f5d4' }} />
@@ -93,17 +117,16 @@ export default function Search() {
               <p className="text-sm" style={{ color: 'rgba(226,232,240,0.8)' }}>{result.explanation}</p>
             </Card>
 
-            {/* Results */}
-            {result.results.length === 0
+            {result.results?.length === 0
               ? <EmptyState icon={SearchIcon} message="Nenhum arquivo encontrado para essa busca." />
               : (
                 <div>
                   <p className="text-xs mb-3" style={{ color: 'rgba(148,163,184,0.5)' }}>
-                    {result.results.length} arquivo(s) encontrado(s)
+                    {result.results?.length} arquivo(s) encontrado(s)
                   </p>
                   <div className="space-y-2">
-                    {result.results.map((f, i) => (
-                      <motion.div key={f.id}
+                    {result.results?.map((f, i) => (
+                      <motion.div key={i}
                         initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
                         className="flex items-center gap-4 rounded-2xl px-5 py-4 card-hover"
                         style={{ background: 'rgba(10,15,25,0.7)', border: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)' }}>

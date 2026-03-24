@@ -213,18 +213,27 @@ def ai_search(body: dict, db: Session = Depends(get_db)):
     if not query:
         raise HTTPException(status_code=400, detail="Informe uma query de busca.")
 
-    files = db.query(FileRecord).all()
-    if not files:
-        return {"query": query, "results": [], "explanation": "Nenhum arquivo indexado ainda. Execute um scan primeiro."}
+    # Aceita arquivos enviados pelo frontend (browser) ou busca no banco local
+    local_files = body.get("files")
+    if local_files:
+        file_list = "\n".join([
+            f"ID:{i} | {f.get('name','')} | {f.get('extension','')} | {round(f.get('size_bytes',0)/1024,1)}KB | {f.get('path','')}"
+            for i, f in enumerate(local_files)
+        ])
+        files_map = {i: f for i, f in enumerate(local_files)}
+    else:
+        db_files = db.query(FileRecord).all()
+        if not db_files:
+            return {"query": query, "results": [], "explanation": "Nenhum arquivo indexado ainda. Selecione uma pasta na tela Início primeiro."}
+        file_list = "\n".join([
+            f"ID:{f.id} | {f.name} | {f.extension} | {round(f.size_bytes/1024,1)}KB | {f.path}"
+            for f in db_files
+        ])
+        files_map = {f.id: {"name": f.name, "path": f.path, "size_bytes": f.size_bytes, "extension": f.extension} for f in db_files}
 
     api_key = _get_api_key()
     if not api_key:
         raise HTTPException(status_code=400, detail="Configure ANTHROPIC_API_KEY para usar a busca inteligente.")
-
-    file_list = "\n".join([
-        f"ID:{f.id} | {f.name} | {f.extension} | {round(f.size_bytes/1024,1)}KB | {f.path}"
-        for f in files
-    ])
 
     prompt = f"""Você é um assistente de busca de arquivos. O usuário quer encontrar: "{query}"
 
@@ -248,12 +257,14 @@ Se nada for relevante, retorne ids vazio."""
     except Exception:
         ids = []; explanation = "Não foi possível interpretar a resposta da IA."
 
-    matched = [f for f in files if f.id in ids]
-    return {
-        "query": query,
-        "explanation": explanation,
-        "results": [{"id": f.id, "name": f.name, "path": f.path, "size_bytes": f.size_bytes, "extension": f.extension} for f in matched],
-    }
+    results = [
+        {"id": fid, "name": f.get("name","") if isinstance(f, dict) else f.name,
+         "path": f.get("path","") if isinstance(f, dict) else f.path,
+         "size_bytes": f.get("size_bytes",0) if isinstance(f, dict) else f.size_bytes,
+         "extension": f.get("extension","") if isinstance(f, dict) else f.extension}
+        for fid, f in files_map.items() if fid in ids
+    ]
+    return {"query": query, "explanation": explanation, "results": results}
 
 
 @app.get("/recommendations")
